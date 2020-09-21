@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+    <class name="com.product.model.ProductVO" table="product" >
+        
+        <id name="productNo" column="PRODUCT_NO">
+            <generator class="generator.MyGenerator"/>
+        </id>
+        
+        <property name="pName" column="P_NAME" />
+        <property name="memId" column="MEM_ID" />
+        <property name="categoryNo" column="CATEGORY_NO" />
+        <property name="pStatus" column="P_STATUS" />
+        <property name="pDetail" column="P_DETAIL" />
+        <property name="pPrice" column="P_PRICE" />
+        <property name="pStock" column="P_STOCK" />
+        <property name="pRating" column="P_RATING" />
+        <property name="numberOfRating" column="NUMBER_OF_RATING" />
+<!--         <property name="pUploadTime" column="P_UPLOAD_TIME" /> -->
+<!--         <property name="base64Image" column="base64Image" /> -->
+        <property name="poPayment" column="PO_PAYMENT" />
+        <property name="poDelivery" column="PO_DELIVERY" />
+        
+    </class>
+</hibernate-mapping>
