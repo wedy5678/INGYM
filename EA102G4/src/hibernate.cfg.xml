@@ -38,6 +38,7 @@
 
 		<!--Java物件與資料庫表格的映射檔 -->
 		<mapping resource="com/product/model/product.hbm.xml" />
+		<mapping resource="com/product_photo/model/product_photo.hbm.xml" />
 
 	</session-factory>
 	

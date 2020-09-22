@@ -13,8 +13,13 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+
 import com.closeHandle.CloseHandle;
 import com.product_photo.model.PhotoVO;
+
+import hibernate.util.HibernateUtil;
 
 public class ProductJDBCDAO implements ProductDAO_interface {
 	private static final String DRIVER = "oracle.jdbc.driver.OracleDriver";
@@ -22,20 +27,19 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 	private static final String USERID = "INGYM";
 	private static final String PASSWD = "123456";
 
-
 	private static final String INSERT_STMT = "INSERT INTO PRODUCT(product_no,p_name, mem_id, category_no, p_price, p_stock, p_detail , PO_PAYMENT , PO_DELIVERY) VALUES ('P'||LPAD(PRODUCT_NO_SEQ.NEXTVAL,6,'0'), ?, ?, ?, ?, ?, ?, ?, ?)";
 	private static final String GET_ALL_STMT = "SELECT * FROM PRODUCT";
 	private static final String GET_ONE_STMT = "SELECT * FROM PRODUCT WHERE PRODUCT_NO=?";
 	private static final String GET_ONE_BY_MEMID = "SELECT * FROM PRODUCT WHERE MEM_ID=?";
 	private static final String DELETE_FROM_FRONT = "UPDATE PRODUCT SET P_STATUS=? WHERE PRODUCT_NO=?";
-	
+
 	private static final String UPDATE = "UPDATE PRODUCT SET P_NAME=?, CATEGORY_NO=?, P_PRICE=?, P_STOCK=?, P_DETAIL=?,PO_PAYMENT=?,PO_DELIVERY=?, P_UPLOAD_TIME=SYSTIMESTAMP WHERE PRODUCT_NO = ?";
-	
+
 	private static final String INSERT_PHOTO = "INSERT INTO PRODUCT_PHOTO(PHOTO_NO,PRODUCT_NO,P_PHOTO) VALUES (PHOTO_NO_SEQ.NEXTVAL,?, ?)";
-	private static final String UPDATE_STOCK ="UPDATE PRODUCT SET P_STOCK = ? WHERE PRODUCT_NO = ?";
-	private static final String RATING ="UPDATE PRODUCT SET NUMBER_OF_RATING = NUMBER_OF_RATING + 1,P_RATING = P_RATING + ? WHERE PRODUCT_NO = ?";
+	private static final String UPDATE_STOCK = "UPDATE PRODUCT SET P_STOCK = ? WHERE PRODUCT_NO = ?";
+	private static final String RATING = "UPDATE PRODUCT SET NUMBER_OF_RATING = NUMBER_OF_RATING + 1,P_RATING = P_RATING + ? WHERE PRODUCT_NO = ?";
 	CloseHandle closeHandle = new CloseHandle();
-	
+
 	public ProductVO updateRating(double pRating, ProductVO productVo) {
 
 		Connection con = null;
@@ -45,20 +49,20 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 			Class.forName(DRIVER);
 			con = DriverManager.getConnection(URL, USERID, PASSWD);
 			pstmt = con.prepareStatement(RATING);
-			
+
 			pstmt.setDouble(1, pRating);
 			pstmt.setString(2, productVo.getProductNo());
-			
+
 			pstmt.executeUpdate();
-			
-		}catch(Exception e) {
+
+		} catch (Exception e) {
 			e.printStackTrace();
-		}finally{
-			closeHandle.close(pstmt,con);
+		} finally {
+			closeHandle.close(pstmt, con);
 		}
 		return null;
 	}
-	
+
 	@Override
 	public ProductVO updateStock(ProductVO productVo) {
 
@@ -69,80 +73,47 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 			Class.forName(DRIVER);
 			con = DriverManager.getConnection(URL, USERID, PASSWD);
 			pstmt = con.prepareStatement(UPDATE_STOCK);
-			
+
 			pstmt.setDouble(1, productVo.getpStock());
 			pstmt.setString(2, productVo.getProductNo());
-			
+
 			pstmt.executeUpdate();
-			
-		}catch(Exception e) {
+
+		} catch (Exception e) {
 			e.printStackTrace();
-		}finally{
-			closeHandle.close(pstmt,con);
+		} finally {
+			closeHandle.close(pstmt, con);
 		}
 		return productVo;
 	}
+
 	@SuppressWarnings("resource")
-	public void insertProductAndPhoto(ProductVO productVO,List<PhotoVO> list) {
-		Connection con = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
+	public void insertProductAndPhoto(ProductVO productVO, List<PhotoVO> list) {
+		Session session = HibernateUtil.getSessionFactory().getCurrentSession();
+		Transaction tx = null;
 		try {
-			Class.forName(DRIVER);
-			System.out.println("載入成功");
-			con = DriverManager.getConnection(URL, USERID, PASSWD);
-			con.setAutoCommit(false);
-			// TODO新增商品
-			String[] str = {"product_no"};
-			pstmt = con.prepareStatement(INSERT_STMT,str);
+			tx = session.beginTransaction();
+			session.saveOrUpdate(productVO);
 
-			pstmt.setString(1, productVO.getpName());
-			pstmt.setString(2, productVO.getMemId());
-			pstmt.setString(3, productVO.getCategoryNo());
-			pstmt.setDouble(4, productVO.getpPrice());
-			pstmt.setDouble(5, productVO.getpStock());
-			pstmt.setString(6, productVO.getpDetail());
-			pstmt.setString(7, productVO.getPoPayment());
-			pstmt.setString(8, productVO.getPoDelivery());
-			
-			
+			String key = (String) session.getIdentifier(productVO);
+			System.out.println("getIdentifier: " + key);
 
-			pstmt.executeUpdate();
-			rs= pstmt.getGeneratedKeys(); //取得自增主鍵
-			String generatedProductNo = null;
-			if (rs.next()) {
-				generatedProductNo = rs.getString(1);
-				// 知其僅有一列,故獲取第一列
-				System.out.println("-----預定義SQL模式-----id = " + generatedProductNo);
+			for (PhotoVO aPhotoVO : list) {
+				PhotoVO photoVO = new PhotoVO();
+				photoVO.setProductNo(key);
+				photoVO.setpPhoto(aPhotoVO.getpPhoto());
+				System.out.println(key + "一張圖片insert");
+				session.saveOrUpdate(photoVO);
 			}
-			// TODO新增圖片
-			pstmt = con.prepareStatement(INSERT_PHOTO);
-			Iterator<PhotoVO> it = list.iterator();
-			while(it.hasNext()) {
-				PhotoVO itNext = it.next();
-				pstmt.setString(1, generatedProductNo);
-				pstmt.setBytes(2, itNext.getpPhoto());
-				System.out.println("一張圖片進來了!");
-				pstmt.addBatch();
-			}
-			pstmt.executeBatch();
-			
-			con.commit();
-		
-		}catch (Exception ee) {
-			ee.printStackTrace();
-			try {
-				System.out.println("錯誤發生 rollback");
-				con.rollback();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}finally {
-			closeHandle.close(rs, pstmt, con);
+
+			tx.commit();
+		} catch (RuntimeException ex) {
+			if (tx != null)
+				tx.rollback();
+			throw ex; // System.out.println(ex.getMessage());
 		}
 	}
-	
+
 	@Override
 	public void insert(ProductVO productVO) {
 
@@ -173,14 +144,14 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 			throw new RuntimeException("A database error occured. " + se.getMessage());
 			// Clean up JDBC resources
 		} finally {
-			closeHandle.close(pstmt,con);
+			closeHandle.close(pstmt, con);
 		}
 
 	}
 
 	@SuppressWarnings("resource")
 	@Override
-	public void update(ProductVO productVO,List<PhotoVO> list) {
+	public void update(ProductVO productVO, List<PhotoVO> list) {
 		Connection con = null;
 		PreparedStatement pstmt = null;
 
@@ -201,10 +172,10 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 			pstmt.setString(8, productVO.getProductNo());
 
 			pstmt.executeUpdate();
-			
+
 			pstmt = con.prepareStatement(INSERT_PHOTO);
 			Iterator<PhotoVO> it = list.iterator();
-			while(it.hasNext()) {
+			while (it.hasNext()) {
 				PhotoVO itNext = it.next();
 				pstmt.setString(1, productVO.getProductNo());
 				pstmt.setBytes(2, itNext.getpPhoto());
@@ -224,7 +195,7 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 				e1.printStackTrace();
 			}
 		} finally {
-			closeHandle.close(pstmt,con);
+			closeHandle.close(pstmt, con);
 		}
 
 	}
@@ -254,12 +225,14 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 			throw new RuntimeException("A database error occured. " + se.getMessage());
 			// Clean up JDBC resources
 		} finally {
-			closeHandle.close(pstmt,con);
+			closeHandle.close(pstmt, con);
 		}
 
 	}
 
-	/****************************************************************findByMemId-start****************************************************************/
+	/****************************************************************
+	 * findByMemId-start
+	 ****************************************************************/
 	@Override
 	public List<ProductVO> findByMemId(String memId) {
 		List<ProductVO> list = new ArrayList<ProductVO>();
@@ -303,12 +276,15 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 			throw new RuntimeException("A database error occured. " + se.getMessage());
 			// Clean up JDBC resources
 		} finally {
-			closeHandle.close(rs,pstmt,con);
+			closeHandle.close(rs, pstmt, con);
 		}
 		return list;
 	}
-	/****************************************************************findByMemId-end****************************************************************/
-	
+
+	/****************************************************************
+	 * findByMemId-end
+	 ****************************************************************/
+
 	@Override
 	public ProductVO findByPrimaryKey(String product_no) {
 
@@ -353,7 +329,7 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 			throw new RuntimeException("A database error occured. " + se.getMessage());
 			// Clean up JDBC resources
 		} finally {
-			closeHandle.close(rs,pstmt,con);
+			closeHandle.close(rs, pstmt, con);
 		}
 		return productVO;
 	}
@@ -362,7 +338,7 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 	@SuppressWarnings("null")
 	public List<ProductVO> getAll() {
 		List<ProductVO> list = new ArrayList<ProductVO>();
-		
+
 		ProductVO productVO = null;
 		Connection con = null;
 		PreparedStatement pstmt = null;
@@ -391,10 +367,10 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 				productVO.setpStatus(rs.getString("P_STATUS"));
 				productVO.setPoPayment(rs.getString("PO_PAYMENT"));
 				productVO.setPoDelivery(rs.getString("PO_DELIVERY"));
-				
-					list.add(productVO); // Store the row in the list
+
+				list.add(productVO); // Store the row in the list
 			}
-			
+
 			System.out.println("載入成功");
 			// Handle any driver errors
 		} catch (ClassNotFoundException e) {
@@ -403,15 +379,15 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 		} catch (SQLException se) {
 			throw new RuntimeException("A database error occured. " + se.getMessage());
 			// Clean up JDBC resources
-		} 
+		}
 //		catch (IOException e) {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		} 
-		 finally {
-			closeHandle.close(outputStream,inputStream,rs,pstmt,con);
+		finally {
+			closeHandle.close(outputStream, inputStream, rs, pstmt, con);
 		}
-		
+
 		return list;
 	}
 
@@ -502,8 +478,8 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 //
 //		}
 //		System.out.println("--------------------------------");
-		
-		//新增商品和圖片
+
+		// 新增商品和圖片
 //		ProductVO productVO5 = new ProductVO();
 //		PhotoVO photoVO5 = new PhotoVO();
 //		List<PhotoVO> list5 = new ArrayList<PhotoVO>();
@@ -527,7 +503,7 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 //		list5.add(photoVO5);
 //		dao.insertProductAndPhoto(productVO5,list5);
 
-		//從會員編號找尋商品
+		// 從會員編號找尋商品
 //		List<ProductVO> list6 =  dao.findByMemId("MEM0000001");
 //		for(ProductVO aProduct : list6) {
 //			Timestamp time = aProduct.getpUploadTime();
@@ -546,13 +522,12 @@ public class ProductJDBCDAO implements ProductDAO_interface {
 //			System.out.println("評價人數 : " + "\t" + aProduct.getNumberOfRating());
 //			System.out.println("" + "狀態 : " + "\t" + aProduct.getpStatus());
 //		}
-		//給予評分
+		// 給予評分
 		ProductVO productVO7 = new ProductVO();
 		productVO7.setProductNo("P000001");
 		dao.updateRating(5, productVO7);
-		
+
 		System.out.println("顯示成功");
 	}
-		
 
 }

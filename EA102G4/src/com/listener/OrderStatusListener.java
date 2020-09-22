@@ -7,9 +7,17 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+
+import hibernate.util.HibernateUtil;
+
 public class OrderStatusListener implements ServletContextListener{
 	@Override
 	public void contextInitialized(ServletContextEvent sce) {
+//		HibernateUtil.getSessionFactory().openSession();
+		
+		
 		ServletContext context = sce.getServletContext();		
 		Map<String,String> poStatusListener = new HashMap<>();
 //		10--處理中 20--訂單已確認 30--貨物運送中 40--已送達 50--已取貨 60--已完成 70--已取消
@@ -61,6 +69,6 @@ public class OrderStatusListener implements ServletContextListener{
 	}
 	@Override
 	public void contextDestroyed(ServletContextEvent sce) {
-		
+//		HibernateUtil.getSessionFactory().close();
 	}
 }

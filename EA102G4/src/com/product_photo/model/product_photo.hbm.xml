@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class name="com.product_photo.model.PhotoVO" table="product_photo">
+
+		<id name="photoNo" column="PHOTO_NO">
+			 <generator class="generator.MyGenerator2"/>
+		</id>
+
+
+		<property name="pPhoto" column="P_PHOTO" />
+		<property name="productNo" column="PRODUCT_NO" />
+
+	</class>
+</hibernate-mapping>
